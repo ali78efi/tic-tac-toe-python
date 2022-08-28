@@ -1,3 +1,4 @@
+from functools import wraps
 from os import name, system
 from time import sleep
 import math
@@ -12,9 +13,11 @@ def _clear():
 
 def table_render(table_list):
     # first line
-    print("╔═══", end="")
+    print("╔══", "═" *
+          len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
     for i in range(len(table_list)-1):
-        print("╦═══", end="")
+        print("╦══", "═" *
+              len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
     print("╗")
 
     # middle lines
@@ -22,19 +25,46 @@ def table_render(table_list):
         row = table_list[i]
         print("║", end="")
         for column in row:
-            print(" ", column, " ", "║", sep="", end="")
+            print(" "*(len(str(table_list[get_size()-1][get_size()-1]))-len(str(column))+1), column, " ", "║", sep="", end="")
         print("")
         if i != len(table_list)-1:
-            print("╠═══", end="")
+            print("╠══", "═" *
+                  len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
             for i in range(len(table_list)-1):
-                print("╬═══", end="")
+                print(
+                    "╬══", "═"*len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
             print("╣", end="\n")
 
     # last line
-    print("╚═══", end="")
+    print("╚══", "═" *
+          len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
     for i in range(len(table_list)-1):
-        print("╩═══", end="")
+        print("╩══", "═" *
+              len(str(table_list[get_size()-1][get_size()-1])), sep="", end="")
     print("╝")
+
+
+def table_size_memorizing(get_size_func):
+    memory = dict({})
+
+    @wraps(get_size_func)
+    def inner(*args, **kwargs):
+        if "size" not in memory:
+            memory["size"] = get_size_func(*args, *kwargs)
+        return memory["size"]
+    return inner
+
+
+@table_size_memorizing
+def get_size():
+    try:
+        table_size = int(
+            input("enter the size of game table(minimum :3) : ".strip(" ")))
+        if table_size < 3:
+            table_size = 3
+        return table_size
+    except:
+        return 3
 
 
 def welcome():
@@ -51,13 +81,13 @@ def welcome():
     if n1 == n2:
         n1 += "(1)"
         n2 += "(2)"
+    table_size = get_size()
+    my_list = []
+    for i in range(1, ((table_size*(table_size-1)+1)+1), table_size):
+        row = list(range(i, i+table_size))
+        my_list.append(row)
 
     while True:
-        my_list = [
-            ["1", "2", "3"],
-            ["4", "5", "6"],
-            ["7", "8", "9"]
-        ]
         _clear()
         table_render(my_list)
         print(n1, n2, sep=" vs ")
@@ -78,16 +108,18 @@ def game_list_render(n):
 
 
 def calCell(n):
-    row = int(math.ceil(n/3))
-    column = int(n % 3)
+    table_size = get_size()
+
+    row = int(math.ceil(n/table_size))
+    column = int(n % table_size)
     if column == 0:
-        column = 3
+        column = table_size
     return row-1, column-1
 
 
 def move(turn, name, game_list):
     cell = int(
-        input(f"{name}'s turn : enter a cell number (1-9): ").strip(" "))
+        input(f"{name}'s turn : enter a cell number (1-{get_size()**2}): ").strip(" "))
     cell_row, cell_column = calCell(cell)
     if game_list[cell_row][cell_column] != 'X' and game_list[cell_row][cell_column] != 'O':
         if turn % 2 == 0:
@@ -109,9 +141,9 @@ def win_check(game_list):
                 return 1
 
     # columns check
-    for i in range(3):
+    for i in range(get_size()):
         column = []
-        for j in range(3):
+        for j in range(get_size()):
             column.append(game_list[j][i])
         if column[0] != " " and all(x == column[0] for x in column):
             if column[0] == 'X':
@@ -122,7 +154,7 @@ def win_check(game_list):
     # Diameters check
     # main Diameter
     diameter = []
-    for i in range(3):
+    for i in range(get_size()):
         diameter.append(game_list[i][i])
     if diameter[0] != " " and all(x == diameter[0] for x in diameter):
         if column[0] == 'X':
@@ -132,8 +164,8 @@ def win_check(game_list):
 
     # second diameter
     diameter = []
-    for i in range(3):
-        diameter.append(game_list[i][3-(i+1)])
+    for i in range(get_size()):
+        diameter.append(game_list[i][get_size()-(i+1)])
     if diameter[0] != " " and all(x == diameter[0] for x in diameter):
         if column[0] == 'X':
             return 0
@@ -159,11 +191,12 @@ def print_winner(index, names_list):
 
 _clear()
 names = welcome()
-game_list = game_list_render(3)
+table_size = get_size()
+game_list = game_list_render(table_size)
 winner = None
 
 turn = 0
-while(turn < 9):
+while(turn < table_size**2):
     _clear()
     print(names[0], names[1], sep=" vs ")
     table_render(game_list)
